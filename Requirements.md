@@ -1,3 +1,17 @@
+# TechHair Kravspecifikation
+
+Denne kravspecifikation er lavet af en gruppe datateknikere med speciale i programmering fra Tech College. 
+Formålet er at definere kravene til udviklingen af et omfattende system til frisøruddannelsen på vores skole. 
+Systemet omfatter online booking, kundeadministration, PoS og backend API'er.
+Kravene er opdelt i kategorier som website, PoS og API, med specifikke krav til både frontend og backend. 
+Vi prioriterer disse krav for at sikre en effektiv udviklingsproces.
+Gennem denne specifikation vil vi definere hvert krav detaljeret, 
+fra online booking til MobilePay-betalinger og implementering af en lokal cache for PoS. 
+Vi vil også diskutere behovet for konfigurationsfiler og sikkerhedsforanstaltninger som datarensning og API-autentificering.
+Vores mål er at skabe et robust og brugervenligt system, der effektivt opfylder behovene i frisøruddannelsen.
+
+Medlemmer: Bastian, Casper, Lukas og Zilas.
+
 ## Kategorier
 - Website (W)
     - Frontend

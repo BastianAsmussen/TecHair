@@ -3,18 +3,11 @@ using Config.Net;
 using Database;
 
 var path = Path.GetFullPath("./config.json");
-Console.WriteLine($"Path: {path}");
-
 var settings = new ConfigurationBuilder<ISettings>()
     .UseJsonFile(path)
     .Build();
 
-var connectionString = settings.ConnectionString;
-Console.WriteLine($"Connection String: {connectionString}");
-
-/*
 var builder = WebApplication.CreateBuilder(args);
-
 {
     var services = builder.Services;
 
@@ -41,4 +34,3 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
-*/

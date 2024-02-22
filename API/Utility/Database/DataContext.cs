@@ -1,12 +1,20 @@
 using Database.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Database;
 
 public class DataContext : DbContext
 {
+    protected readonly IConfiguration Configuration;
+
+    public DataContext(IConfiguration configuration)
+    {
+        Configuration = configuration;
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql("Host=localhost;Database=techair_temp;Username=postgres;Password=toor");
+        => optionsBuilder.UseNpgsql(Configuration.GetConnectionString("DatabaseConnection")); // ""Host=localhost;Database=techair;Username=postgres;Password=postgres");
 
     public DbSet<User> Users { get; set; }
     public DbSet<Employee> Employees { get; set; }

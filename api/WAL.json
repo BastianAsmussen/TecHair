@@ -1,0 +1,1 @@
+{"ProductId":1,"Name":"sss","Description":"This is a serialize test","PriceHistory":[{"PriceId":1,"Value":50.0,"Date":new Date(1708610625167)},{"PriceId":2,"Value":100.0,"Date":new Date(1708610625169)}]}

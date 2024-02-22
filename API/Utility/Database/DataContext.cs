@@ -14,7 +14,7 @@ public class DataContext : DbContext
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql(Configuration.GetConnectionString("DatabaseConnection")); // ""Host=localhost;Database=techair;Username=postgres;Password=postgres");
+        => optionsBuilder.UseNpgsql(Configuration.GetConnectionString("DatabaseConnection"));
 
     public DbSet<User> Users { get; set; }
     public DbSet<Employee> Employees { get; set; }

@@ -2,6 +2,7 @@ using Database;
 using Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using API.Utility;
 
 namespace API.Controllers.Employees;
 
@@ -10,14 +11,23 @@ namespace API.Controllers.Employees;
 public class EmployeesController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<SimpleEmployee>>> GetEmployees() {
+    public async Task<ActionResult<IEnumerable<SimpleEmployee>>> GetEmployees()
+    {
         return await context.Employees
           .Select(e => new SimpleEmployee(e))
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<SimpleEmployee>> PostEmployee(Employee employee) {
+    public async Task<ActionResult<SimpleEmployee>> PostEmployee(Employee employee)
+    {
+        // Sanitize the user.
+        employee.User.Sanitize();
+        if (!employee.User.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
+
         context.Employees.Add(employee);
         await context.SaveChangesAsync();
 
@@ -41,7 +51,14 @@ public class EmployeesController(DataContext context) : ControllerBase
     {
         if (id != employee.EmployeeId)
         {
-            return BadRequest();
+            return BadRequest("ID mismatch!");
+        }
+
+        // Sanitize the user.
+        employee.User.Sanitize();
+        if (!employee.User.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
         }
 
         var foundEmployee = await context.Employees.FindAsync(id);

@@ -11,6 +11,8 @@ public class DataContext : DbContext
     public DataContext(IConfiguration configuration)
     {
         Configuration = configuration;
+
+        this.Database.Migrate();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

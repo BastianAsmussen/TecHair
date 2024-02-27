@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:latest
+    container_name: techair_db
+    restart: always
+    volumes:
+      - ./API/Utility/Database/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: toor
+      POSTGRES_DB: techair
+    ports:
+      - '5432:5432'
+    networks:
+      backend:
+        ipv4_address: 1.0.0.2
+  api:
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    container_name: techair_api
+    restart: always
+    depends_on:
+      - 'database'
+    ports:
+      - '8080:8080'
+    networks:
+      backend:
+        ipv4_address: 1.0.0.3
+      frontend:
+
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 1.0.0.0/29
+          gateway: 1.0.0.1
+  frontend:
+    driver: bridge

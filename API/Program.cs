@@ -11,6 +11,7 @@ public class Program
     public static readonly ISettings Settings = new ConfigurationBuilder<ISettings>()
         .UseJsonFile(Path.GetFullPath("./config.json"))
         .Build();
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,5 @@ public class Program
         app.UseHttpsRedirection();
         app.MapControllers();
         app.Run();
-
     }
 }

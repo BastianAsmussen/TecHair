@@ -2,6 +2,7 @@ using Database;
 using Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using API.Utility;
 
 namespace API.Controllers.Users;
 
@@ -17,7 +18,18 @@ public class UsersController(DataContext context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<SimpleUser>> PostUser(User user) {
+    public async Task<ActionResult<SimpleUser>> PostUser(User user)
+    {
+        // Hash the password.
+        user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+        // Sanitize the user.
+        user.Sanitize();
+        if (!user.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
+
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
@@ -41,7 +53,20 @@ public class UsersController(DataContext context) : ControllerBase
     {
         if (id != user.UserId)
         {
-            return BadRequest();
+            return BadRequest("ID mismatch!");
+        }
+
+        // If the password is null, don't update it.
+        if (user.Password != null)
+        {
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+        }
+
+        // Sanitize the user.
+        user.Sanitize();
+        if (!user.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
         }
 
         var foundUser = await context.Users.FindAsync(id);
@@ -78,6 +103,37 @@ public class UsersController(DataContext context) : ControllerBase
         await context.SaveChangesAsync();
         
         return NoContent();
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<SimpleUser>> Login(Credentials credentials)
+    {
+        var user =  new User {
+            Email = credentials.Email,
+            Password = credentials.Password,
+
+            Name = "Login"
+        };
+
+        // Sanitize the user.
+        user.Sanitize();
+        if (!user.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
+
+        var foundUser = await context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+        if (foundUser == null)
+        {
+            return NotFound();
+        }
+
+        if (!foundUser.PasswordMatches(user.Password))
+        {
+            return Unauthorized();
+        }
+
+        return new SimpleUser(foundUser);
     }
 
     private bool UserExists(int id)

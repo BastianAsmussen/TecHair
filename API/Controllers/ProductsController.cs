@@ -24,8 +24,8 @@ public class ProductsController(DataContext context) : ControllerBase
         return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<Product>> GetProduct(long id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<Product>> GetProduct(int id)
     {
         var product = await context.Products.FindAsync(id);
         if (product == null)
@@ -36,8 +36,8 @@ public class ProductsController(DataContext context) : ControllerBase
         return product;
     }
 
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<Product>> PutProduct(long id, Product product)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<Product>> PutProduct(int id, Product product)
     {
         if (id != product.ProductId)
         {
@@ -67,8 +67,8 @@ public class ProductsController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> DeleteProduct(long id)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteProduct(int id)
     {
         var product = await context.Products.FindAsync(id);
         if (product == null)
@@ -82,7 +82,7 @@ public class ProductsController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    private bool ProductExists(long id)
+    private bool ProductExists(int id)
     {
         return context.Products.Any(p => p.ProductId == id);
     }

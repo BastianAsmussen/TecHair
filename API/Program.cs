@@ -15,8 +15,6 @@ public class Program
     {
         DatabaseLC databaseLC = new();
 
-        databaseLC.test();
-
         var builder = WebApplication.CreateBuilder(args);
         {
             var services = builder.Services;

@@ -3,6 +3,7 @@ using Config.Net;
 using Database;
 using System.IO;
 using API.Utility.Database.WAL;
+using Database.Models;
 
 namespace API;
 
@@ -13,10 +14,6 @@ public class Program
         .Build();
     public static void Main(string[] args)
     {
-        DatabaseLC databaseLC = new();
-
-        databaseLC.test();
-
         var builder = WebApplication.CreateBuilder(args);
         {
             var services = builder.Services;

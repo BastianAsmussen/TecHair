@@ -2,7 +2,6 @@ using API.Utility;
 using Config.Net;
 using Database;
 using System.IO;
-using API.Utility.Database.WAL;
 using Database.Models;
 
 namespace API;

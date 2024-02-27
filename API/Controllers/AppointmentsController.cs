@@ -26,8 +26,8 @@ public class AppointmentsController(DataContext context) : ControllerBase
         return CreatedAtAction(nameof(GetAppointment), new { id = appointment.AppointmentId }, appointment);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<Appointment>> GetAppointment(long id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<Appointment>> GetAppointment(int id)
     {
         var appointment = await context.Appointments.FindAsync(id);
         if (appointment == null)
@@ -38,8 +38,8 @@ public class AppointmentsController(DataContext context) : ControllerBase
         return appointment;
     }
 
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<Appointment>> PutAppointment(long id, Appointment appointment)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<Appointment>> PutAppointment(int id, Appointment appointment)
     {
         if (id != appointment.AppointmentId)
         {
@@ -69,8 +69,8 @@ public class AppointmentsController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> DeleteAppointment(long id)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteAppointment(int id)
     {
         var appointment = await context.Appointments.FindAsync(id);
         if (appointment == null)
@@ -84,7 +84,7 @@ public class AppointmentsController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    private bool AppointmentExists(long id)
+    private bool AppointmentExists(int id)
     {
         return context.Appointments.Any(e => e.AppointmentId == id);
     }

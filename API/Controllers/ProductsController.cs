@@ -52,6 +52,9 @@ public class ProductsController(DataContext context) : ControllerBase
 
         foundProduct = product;
 
+        context.Products
+            .Update(foundProduct);
+
         try
         {
             await context.SaveChangesAsync();

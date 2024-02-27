@@ -52,6 +52,9 @@ public class EmployeesController(DataContext context) : ControllerBase
 
         foundEmployee = employee;
 
+        context.Employees
+            .Update(foundEmployee);
+
         try
         {
             await context.SaveChangesAsync();

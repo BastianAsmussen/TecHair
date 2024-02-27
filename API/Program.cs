@@ -1,36 +1,49 @@
 using API.Utility;
 using Config.Net;
 using Database;
+using System.IO;
+using API.Utility.Database.WAL;
 
-var path = Path.GetFullPath("./config.json");
-var settings = new ConfigurationBuilder<ISettings>()
-    .UseJsonFile(path)
-    .Build();
+namespace API;
 
-var builder = WebApplication.CreateBuilder(args);
+public class Program
 {
-    var services = builder.Services;
+    public static readonly ISettings Settings = new ConfigurationBuilder<ISettings>()
+        .UseJsonFile(Path.GetFullPath("./config.json"))
+        .Build();
+    public static void Main(string[] args)
+    {
+        DatabaseLC databaseLC = new();
 
-    services.AddDbContext<DataContext>();
-    services.AddControllers();
-    services.AddEndpointsApiExplorer();
-    services.AddSwaggerGen();
+        databaseLC.test();
+
+        var builder = WebApplication.CreateBuilder(args);
+        {
+            var services = builder.Services;
+
+            services.AddDbContext<DataContext>();
+            services.AddControllers();
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
+        }
+
+        var app = builder.Build();
+
+        app.UseCors(b => b
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+        );
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseHttpsRedirection();
+        app.MapControllers();
+        app.Run();
+
+    }
 }
-
-var app = builder.Build();
-
-app.UseCors(b => b
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-);
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.MapControllers();
-app.Run();

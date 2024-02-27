@@ -50,10 +50,7 @@ public class ProductsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundProduct.Name = product.Name;
-        foundProduct.Description = product.Description;
-
-        foundProduct.PriceHistory = product.PriceHistory;
+        foundProduct = product;
 
         try
         {
@@ -87,3 +84,4 @@ public class ProductsController(DataContext context) : ControllerBase
         return context.Products.Any(p => p.ProductId == id);
     }
 }
+

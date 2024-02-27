@@ -3,29 +3,29 @@ using Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace API.Controllers;
+namespace API.Controllers.Employees;
 
 [Route("api/[controller]")]
 [ApiController]
 public class EmployeesController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees() {
+    public async Task<ActionResult<IEnumerable<SimpleEmployee>>> GetEmployees() {
         return await context.Employees
-          .Select(e => e)
+          .Select(e => new SimpleEmployee(e))
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<Employee>> PostEmployee(Employee employee) {
+    public async Task<ActionResult<SimpleEmployee>> PostEmployee(Employee employee) {
         context.Employees.Add(employee);
         await context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, employee);
+        return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, new SimpleEmployee(employee));
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<Employee>> GetEmployee(long id)
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<SimpleEmployee>> GetEmployee(int id)
     {
         var employee = await context.Employees.FindAsync(id);
         if (employee == null)
@@ -33,11 +33,11 @@ public class EmployeesController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return employee;
+        return new SimpleEmployee(employee);
     }
 
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<Employee>> PutEmployee(long id, Employee employee)
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<SimpleEmployee>> PutEmployee(int id, Employee employee)
     {
         if (id != employee.EmployeeId)
         {
@@ -51,9 +51,7 @@ public class EmployeesController(DataContext context) : ControllerBase
         }
 
         foundEmployee = employee;
-
-        context.Employees
-            .Update(foundEmployee);
+        context.Employees.Update(foundEmployee);
 
         try
         {
@@ -67,8 +65,8 @@ public class EmployeesController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> DeleteEmployee(long id)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteEmployee(int id)
     {
         var employee = await context.Employees.FindAsync(id);
         if (employee == null)
@@ -82,7 +80,7 @@ public class EmployeesController(DataContext context) : ControllerBase
         return NoContent();
     }
 
-    private bool EmployeeExists(long id)
+    private bool EmployeeExists(int id)
     {
         return context.Employees.Any(e => e.EmployeeId == id);
     }

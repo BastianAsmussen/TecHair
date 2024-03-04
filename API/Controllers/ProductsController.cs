@@ -1,6 +1,7 @@
-using API.Controllers.DTO;
+using API.Controllers.DTO.Products;
 using API.Utility.Database.Models;
 using Database;
+using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,22 +12,29 @@ namespace API.Controllers;
 public class ProductsController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts() {
+    public async Task<ActionResult<IEnumerable<BaseProductDto>>> GetProducts() {
         return await context.Products
-          .Select(p => new ProductDto(p))
+          .Select(p => p.Adapt<BaseProductDto>())
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<ProductDto>> PostProduct(ProductDto product) {
-        context.Products.Add(Product.FromDto(product));
+    public async Task<ActionResult<BaseProductDto>> PostProduct(CreateProductDto productDto) {
+        if (productDto.Price < 0) return BadRequest("Invalid price!");
+        // If the product already exists, return a bad request.
+        if (context.Products.Any(p => p.Name == productDto.Name)) return BadRequest("Product already exists!");
+        
+        productDto.Description ??= "";
+        
+        var product = productDto.Adapt<Product>();
+        context.Products.Add(product);
         await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<ProductDto>> GetProduct(int id)
+    public async Task<ActionResult<BaseProductDto>> GetProduct(int id)
     {
         var product = await context.Products.FindAsync(id);
         if (product == null)
@@ -34,11 +42,11 @@ public class ProductsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return new ProductDto(product);
+        return product.Adapt<BaseProductDto>();
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<ProductDto>> PutProduct(int id, ProductDto product)
+    public async Task<ActionResult<BaseProductDto>> PutProduct(int id, UpdateProductDto product)
     {
         if (id != product.ProductId)
         {
@@ -51,7 +59,19 @@ public class ProductsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundProduct = Product.FromDto(product);
+        if (product.Price < 0) return BadRequest("Invalid price!");
+        if (context.Products.Any(p => p.Name == product.Name && p.ProductId != id)) return BadRequest("Product already exists!");
+
+        product.Description ??= "";
+
+        // Add the price to the price history.
+        foundProduct.PriceHistory.Append(new Price
+        {
+            Value = product.Price,
+            Date = DateTime.Now
+        });
+
+        foundProduct = product.Adapt(foundProduct);
         context.Products
             .Update(foundProduct);
 

@@ -1,7 +1,9 @@
 using Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using API.Controllers.DTO;
+using API.Controllers.DTO.Users;
+using API.Utility.Database.Models;
+using Mapster;
 
 namespace API.Controllers;
 
@@ -10,22 +12,40 @@ namespace API.Controllers;
 public class UsersController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers() {
+    public async Task<ActionResult<IEnumerable<BaseUserDto>>> GetUsers() {
         return await context.Users
-          .Select(u => new UserDto(u))
+          .Select(u => u.Adapt<BaseUserDto>())
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<UserDto>> PostUser(UserDto user) {
-        context.Users.Add(Utility.Database.Models.User.FromDto(user));
+    public async Task<ActionResult<BaseUserDto>> PostUser(CreateUserDto userDto) {
+        var user = userDto.Adapt<User>();
+        user.Sanitize();
+
+        if (!user.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
+
+        // Check if the email is already in use.
+        var foundUser = await context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+        if (foundUser != null)
+        {
+            return BadRequest("Email already in use!");
+        }
+
+        // Hash the password.
+        user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+        context.Users.Add(user);
         await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<UserDto>> GetUser(int id)
+    public async Task<ActionResult<BaseUserDto>> GetUser(int id)
     {
         var user = await context.Users.FindAsync(id);
         if (user == null)
@@ -33,11 +53,11 @@ public class UsersController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return new UserDto(user);
+        return user.Adapt<BaseUserDto>();
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<UserDto>> PutUser(int id, UserDto user)
+    public async Task<ActionResult<BaseUserDto>> PutUser(int id, UpdateUserDto user)
     {
         if (id != user.UserId)
         {
@@ -50,9 +70,17 @@ public class UsersController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundUser = Utility.Database.Models.User.FromDto(user);
-        context.Users
-            .Update(foundUser);
+        foundUser.Name = user.Name ?? foundUser.Name;
+        foundUser.Email = user.Email ?? foundUser.Email;
+        foundUser.Password = BCrypt.Net.BCrypt.HashPassword(user.Password) ?? foundUser.Password;
+        foundUser.Sanitize();
+
+        if (!foundUser.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
+
+        context.Users.Update(foundUser);
 
         try
         {
@@ -86,4 +114,3 @@ public class UsersController(DataContext context) : ControllerBase
         return context.Users.Any(u => u.UserId == id);
     }
 }
-

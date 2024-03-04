@@ -1,8 +1,10 @@
 using Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using API.Controllers.DTO;
+using API.Controllers.DTO.Employees;
+using API.Controllers.DTO.Users;
 using API.Utility.Database.Models;
+using Mapster;
 
 namespace API.Controllers;
 
@@ -11,22 +13,33 @@ namespace API.Controllers;
 public class EmployeesController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetEmployees() {
+    public async Task<ActionResult<IEnumerable<BaseEmployeeDto>>> GetEmployees() {
         return await context.Employees
-          .Select(e => new EmployeeDto(e))
+          .Select(e => e.Adapt<BaseEmployeeDto>())
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<EmployeeDto>> PostEmployee(EmployeeDto employee) {
-        context.Employees.Add(Employee.FromDto(employee));
+    public async Task<ActionResult<BaseEmployeeDto>> PostEmployee(CreateEmployeeDto employeeDto) {
+        var manager = await context.Employees.FindAsync(employeeDto.ManagerId);
+        if (manager == null) return BadRequest("Manager not found!");
+
+        employeeDto.Manager = manager.Adapt<BaseEmployeeDto>();
+
+        var user = await context.Users.FindAsync(employeeDto.UserId);
+        if (user == null) return BadRequest("User not found!");
+
+        employeeDto.User = user.Adapt<BaseUserDto>();
+
+        var employee = employeeDto.Adapt<Employee>();
+        context.Employees.Add(employee);
         await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, employee);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<EmployeeDto>> GetEmployee(int id)
+    public async Task<ActionResult<BaseEmployeeDto>> GetEmployee(int id)
     {
         var employee = await context.Employees.FindAsync(id);
         if (employee == null)
@@ -34,11 +47,11 @@ public class EmployeesController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return new EmployeeDto(employee);
+        return employee.Adapt<BaseEmployeeDto>();
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<EmployeeDto>> PutEmployee(int id, EmployeeDto employee)
+    public async Task<ActionResult<BaseEmployeeDto>> PutEmployee(int id, UpdateEmployeeDto employee)
     {
         if (id != employee.EmployeeId)
         {
@@ -51,10 +64,23 @@ public class EmployeesController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundEmployee = Employee.FromDto(employee);
+        var manager = await context.Employees.FindAsync(employee.Manager);
+        if (manager == null)
+        {
+            return BadRequest("Manager not found!");
+        }
 
-        context.Employees
-            .Update(foundEmployee);
+        employee.Manager = manager.Adapt<BaseEmployeeDto>();
+
+        var user = await context.Users.FindAsync(employee.User);
+        if (user == null)
+        {
+            return BadRequest("User not found!");
+        }
+
+        employee.User = user.Adapt<UpdateUserDto>();
+        foundEmployee = employee.Adapt(foundEmployee);
+        context.Employees.Update(foundEmployee);
 
         try
         {

@@ -12,7 +12,7 @@ public class User
     [StringLength(320)]
     public string Email { get; set; }
 
-    [StringLength(71)]
+    [StringLength(60)]
     public string? Password { get; set; }
 
     [Required]

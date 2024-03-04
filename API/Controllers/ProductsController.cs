@@ -1,5 +1,6 @@
+using API.Controllers.DTO;
+using API.Utility.Database.Models;
 using Database;
-using Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,22 +11,22 @@ namespace API.Controllers;
 public class ProductsController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetProducts() {
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts() {
         return await context.Products
-          .Select(p => p)
+          .Select(p => new ProductDto(p))
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> PostProduct(Product product) {
-        context.Products.Add(product);
+    public async Task<ActionResult<ProductDto>> PostProduct(ProductDto product) {
+        context.Products.Add(Product.FromDto(product));
         await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Product>> GetProduct(int id)
+    public async Task<ActionResult<ProductDto>> GetProduct(int id)
     {
         var product = await context.Products.FindAsync(id);
         if (product == null)
@@ -33,11 +34,11 @@ public class ProductsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return product;
+        return new ProductDto(product);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<Product>> PutProduct(int id, Product product)
+    public async Task<ActionResult<ProductDto>> PutProduct(int id, ProductDto product)
     {
         if (id != product.ProductId)
         {
@@ -50,8 +51,7 @@ public class ProductsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundProduct = product;
-
+        foundProduct = Product.FromDto(product);
         context.Products
             .Update(foundProduct);
 
@@ -87,4 +87,3 @@ public class ProductsController(DataContext context) : ControllerBase
         return context.Products.Any(p => p.ProductId == id);
     }
 }
-

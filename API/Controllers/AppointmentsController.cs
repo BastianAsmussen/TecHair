@@ -1,5 +1,6 @@
-﻿using Database;
-using Database.Models;
+﻿using API.Controllers.DTO;
+using API.Utility.Database.Models;
+using Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,24 +11,24 @@ namespace API.Controllers;
 public class AppointmentsController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointment()
+    public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAppointment()
     {
         return await context.Appointments
-          .Select(a => a)
+          .Select(a => new AppointmentDto(a))
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<Appointment>> PostAppointment(Appointment appointment)
+    public async Task<ActionResult<AppointmentDto>> PostAppointment(AppointmentDto appointment)
     {
-        context.Appointments.Add(appointment);
+        context.Appointments.Add(Appointment.FromDto(appointment));
         await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetAppointment), new { id = appointment.AppointmentId }, appointment);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Appointment>> GetAppointment(int id)
+    public async Task<ActionResult<AppointmentDto>> GetAppointment(int id)
     {
         var appointment = await context.Appointments.FindAsync(id);
         if (appointment == null)
@@ -35,11 +36,11 @@ public class AppointmentsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return appointment;
+        return new AppointmentDto(appointment);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<Appointment>> PutAppointment(int id, Appointment appointment)
+    public async Task<ActionResult<AppointmentDto>> PutAppointment(int id, AppointmentDto appointment)
     {
         if (id != appointment.AppointmentId)
         {
@@ -52,7 +53,7 @@ public class AppointmentsController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundAppointment = appointment;
+        foundAppointment = Appointment.FromDto(appointment);
 
         context.Appointments
             .Update(foundAppointment);
@@ -86,7 +87,7 @@ public class AppointmentsController(DataContext context) : ControllerBase
 
     private bool AppointmentExists(int id)
     {
-        return context.Appointments.Any(e => e.AppointmentId == id);
+        return context.Appointments.Any(a => a.AppointmentId == id);
     }
 
 }

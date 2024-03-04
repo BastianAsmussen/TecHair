@@ -1,41 +1,32 @@
 using Database;
-using Database.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using API.Utility;
+using API.Controllers.DTO;
+using API.Utility.Database.Models;
 
-namespace API.Controllers.Employees;
+namespace API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
 public class EmployeesController(DataContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<SimpleEmployee>>> GetEmployees()
-    {
+    public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetEmployees() {
         return await context.Employees
-          .Select(e => new SimpleEmployee(e))
+          .Select(e => new EmployeeDto(e))
           .ToListAsync();
     }
 
     [HttpPost]
-    public async Task<ActionResult<SimpleEmployee>> PostEmployee(Employee employee)
-    {
-        // Sanitize the user.
-        employee.User.Sanitize();
-        if (!employee.User.IsValidEmail())
-        {
-            return BadRequest("Invalid email!");
-        }
-
-        context.Employees.Add(employee);
+    public async Task<ActionResult<EmployeeDto>> PostEmployee(EmployeeDto employee) {
+        context.Employees.Add(Employee.FromDto(employee));
         await context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, new SimpleEmployee(employee));
+        return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, employee);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<SimpleEmployee>> GetEmployee(int id)
+    public async Task<ActionResult<EmployeeDto>> GetEmployee(int id)
     {
         var employee = await context.Employees.FindAsync(id);
         if (employee == null)
@@ -43,22 +34,15 @@ public class EmployeesController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        return new SimpleEmployee(employee);
+        return new EmployeeDto(employee);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<SimpleEmployee>> PutEmployee(int id, Employee employee)
+    public async Task<ActionResult<EmployeeDto>> PutEmployee(int id, EmployeeDto employee)
     {
         if (id != employee.EmployeeId)
         {
-            return BadRequest("ID mismatch!");
-        }
-
-        // Sanitize the user.
-        employee.User.Sanitize();
-        if (!employee.User.IsValidEmail())
-        {
-            return BadRequest("Invalid email!");
+            return BadRequest();
         }
 
         var foundEmployee = await context.Employees.FindAsync(id);
@@ -67,8 +51,10 @@ public class EmployeesController(DataContext context) : ControllerBase
             return NotFound();
         }
 
-        foundEmployee = employee;
-        context.Employees.Update(foundEmployee);
+        foundEmployee = Employee.FromDto(employee);
+
+        context.Employees
+            .Update(foundEmployee);
 
         try
         {

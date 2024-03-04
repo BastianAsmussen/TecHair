@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
+using API.Controllers.DTO;
 
-namespace Database.Models;
+namespace API.Utility.Database.Models;
 
 public class User
 {
@@ -11,14 +10,14 @@ public class User
 
     [Required]
     [StringLength(320)]
-    public required string Email { get; set; }
+    public string Email { get; set; }
 
     [StringLength(71)]
     public string? Password { get; set; }
 
     [Required]
     [StringLength(128)]
-    public required string Name { get; set; }
+    public string Name { get; set; }
 
     public void Sanitize()
     {
@@ -36,5 +35,15 @@ public class User
 
         return emailRegex.IsMatch(Email);
     }
-}
 
+    public static User FromDto(UserDto user)
+    {
+        return new User
+        {
+            UserId = user.UserId,
+
+            Email = user.Email,
+            Name = user.Name
+        };
+    }
+}

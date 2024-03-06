@@ -166,6 +166,24 @@ public class UsersController : ControllerBase
         }
     }
 
+    [HttpGet]
+    public async Task<ActionResult<Authorization>> Login([FromBody] string email, [FromBody] string password)
+    {
+        var user = await _unitOfWork.UserRepository.Get(filter: u => u.Email == email);
+        if (user == null || !user.Any())
+        {
+            return NotFound();
+        }
+
+        var foundUser = user.First();
+        if (!BCrypt.Net.BCrypt.Verify(password, foundUser.Password))
+        {
+            return Unauthorized();
+        }
+
+        return new Authorization { Role = Role.User, Token = Authorization.GenerateToken(foundUser), User = foundUser };
+    }
+
     private async Task<bool> UserExists(int id)
     {
         return await _unitOfWork.UserRepository.Get(filter: u => u.UserId == id) != null;

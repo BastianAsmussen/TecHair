@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20240304095010_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20240306110308_AddAuthorization")]
+    partial class AddAuthorization
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,7 +57,32 @@ namespace API.Migrations
 
                     b.HasIndex("CustomerUserId");
 
-                    b.ToTable("Appointments");
+                    b.ToTable("Appointments", (string)null);
+                });
+
+            modelBuilder.Entity("API.Utility.Database.Models.Authorization", b =>
+                {
+                    b.Property<int>("AuthorizationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AuthorizationId"));
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("AuthorizationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Authorization", (string)null);
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.Employee", b =>
@@ -80,7 +105,28 @@ namespace API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Employees");
+                    b.ToTable("Employees", (string)null);
+                });
+
+            modelBuilder.Entity("API.Utility.Database.Models.Order", b =>
+                {
+                    b.Property<int>("OrderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderId"));
+
+                    b.Property<int>("AppointmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("OrderId");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.Price", b =>
@@ -104,7 +150,7 @@ namespace API.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("Prices");
+                    b.ToTable("Prices", (string)null);
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.Product", b =>
@@ -122,9 +168,14 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("integer");
+
                     b.HasKey("ProductId");
 
-                    b.ToTable("Products");
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.User", b =>
@@ -151,7 +202,7 @@ namespace API.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.Appointment", b =>
@@ -173,6 +224,17 @@ namespace API.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("API.Utility.Database.Models.Authorization", b =>
+                {
+                    b.HasOne("API.Utility.Database.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("API.Utility.Database.Models.Employee", b =>
                 {
                     b.HasOne("API.Utility.Database.Models.Employee", "Manager")
@@ -190,11 +252,34 @@ namespace API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("API.Utility.Database.Models.Order", b =>
+                {
+                    b.HasOne("API.Utility.Database.Models.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+                });
+
             modelBuilder.Entity("API.Utility.Database.Models.Price", b =>
                 {
                     b.HasOne("API.Utility.Database.Models.Product", null)
                         .WithMany("PriceHistory")
                         .HasForeignKey("ProductId");
+                });
+
+            modelBuilder.Entity("API.Utility.Database.Models.Product", b =>
+                {
+                    b.HasOne("API.Utility.Database.Models.Order", null)
+                        .WithMany("Products")
+                        .HasForeignKey("OrderId");
+                });
+
+            modelBuilder.Entity("API.Utility.Database.Models.Order", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("API.Utility.Database.Models.Product", b =>

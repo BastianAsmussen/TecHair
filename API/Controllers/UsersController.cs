@@ -1,3 +1,4 @@
+using API.Controllers.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using API.Utility.Database.DAL;
@@ -114,7 +115,7 @@ public class UsersController : ControllerBase
         {
             // Check if the email is already in use.
             var foundUser = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
-            if (foundUser != null)
+            if (foundUser != null && foundUser.Any())
             {
                 return BadRequest("Email already in use!");
             }
@@ -166,11 +167,8 @@ public class UsersController : ControllerBase
         }
     }
 
-    [HttpGet("login")]
-    public async Task<ActionResult<Authorization>> Login(
-        [FromBody]
-        [Bind("Email,Password")]
-        User user)
+    [HttpPost("login")]
+    public async Task<ActionResult<Authorization>> Login([FromBody] UserLogin user)
     {
         var foundUsers = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
         if (foundUsers == null || !foundUsers.Any())

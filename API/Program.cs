@@ -1,18 +1,20 @@
 using API.Utility;
 using Config.Net;
-using Database;
-using System.IO;
+using API.Utility.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace API;
 
 public class Program
 {
     public static readonly ISettings Settings = new ConfigurationBuilder<ISettings>()
-        .UseJsonFile(Path.GetFullPath("./config.json"))
+        .UseJsonFile(Path.GetFullPath("config.json"))
         .Build();
 
     public static void Main(string[] args)
     {
+        if (Settings.ConnectionString == null) throw new InvalidOperationException("Connection string not found!");
+
         var builder = WebApplication.CreateBuilder(args);
         {
             var services = builder.Services;

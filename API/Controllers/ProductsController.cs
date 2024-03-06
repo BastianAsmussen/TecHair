@@ -1,6 +1,5 @@
-using API.Controllers.DTO;
+using API.Utility.Database.DAL;
 using API.Utility.Database.Models;
-using Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,82 +7,147 @@ namespace API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ProductsController(DataContext context) : ControllerBase
+public class ProductsController : ControllerBase
 {
+    private readonly UnitOfWork _unitOfWork = new();
+
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts() {
-        return await context.Products
-          .Select(p => new ProductDto(p))
-          .ToListAsync();
+    public async Task<ActionResult<IEnumerable<Product>>> GetProducts([FromHeader(Name = "authorization")] string authorization) {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
+        try {
+            var products = await _unitOfWork.ProductRepository.Get();
+
+            return Ok(products);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpPost]
-    public async Task<ActionResult<ProductDto>> PostProduct(ProductDto product) {
-        context.Products.Add(Product.FromDto(product));
-        await context.SaveChangesAsync();
+    public async Task<ActionResult<Product>> PostProduct(
+        [FromHeader(Name = "authorization")] string authorization,
+        [Bind("Name,Description,PriceHistory")]
+        Product product) {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
+        try
+        {
+            if (product.PriceHistory.First().Value < 0) return BadRequest("Invalid price!");
+            if (await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name) != null)
+                return BadRequest("Product already exists!");
+
+            product.Description ??= "";
+
+            _unitOfWork.ProductRepository.Insert(product);
+            await _unitOfWork.Save();
+
+            return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<ProductDto>> GetProduct(int id)
+    public async Task<ActionResult<Product>> GetProduct(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var product = await context.Products.FindAsync(id);
-        if (product == null)
-        {
-            return NotFound();
-        }
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        return new ProductDto(product);
+        try
+        {
+            var product = await _unitOfWork.ProductRepository.GetById(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(product);
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await ProductExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<ProductDto>> PutProduct(int id, ProductDto product)
+    public async Task<ActionResult<Product>> PutProduct(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id,
+        [Bind("ProductId,Name,Description,PriceHistory")]
+        Product product)
     {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
         if (id != product.ProductId)
         {
             return BadRequest();
         }
 
-        var foundProduct = await context.Products.FindAsync(id);
-        if (foundProduct == null)
-        {
-            return NotFound();
-        }
-
-        foundProduct = Product.FromDto(product);
-        context.Products
-            .Update(foundProduct);
-
         try
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException) when (!ProductExists(id))
-        {
-            return NotFound();
-        }
+            if (product.PriceHistory.First().Value < 0) return BadRequest("Invalid price!");
+            if (await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name) != null)
+                return BadRequest("Product already exists!");
 
-        return NoContent();
+            _unitOfWork.ProductRepository.Update(product);
+            await _unitOfWork.Save();
+
+            return NoContent();
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await ProductExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteProduct(int id)
+    public async Task<IActionResult> DeleteProduct(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var product = await context.Products.FindAsync(id);
-        if (product == null)
-        {
-            return NotFound();
-        }
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        context.Products.Remove(product);
-        await context.SaveChangesAsync();
-        
-        return NoContent();
+        try {
+            var product = await _unitOfWork.ProductRepository.GetById(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            _unitOfWork.ProductRepository.Delete(product);
+            await _unitOfWork.Save();
+
+            return NoContent();
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await ProductExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
-    private bool ProductExists(int id)
+    private async Task<bool> ProductExists(int id)
     {
-        return context.Products.Any(p => p.ProductId == id);
+        return await _unitOfWork.ProductRepository.Get(filter: p => p.ProductId == id) != null;
     }
 }

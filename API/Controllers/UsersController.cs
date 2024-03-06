@@ -1,89 +1,191 @@
-using Database;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using API.Controllers.DTO;
+using API.Utility.Database.DAL;
+using API.Utility.Database.Models;
 
 namespace API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UsersController(DataContext context) : ControllerBase
+public class UsersController : ControllerBase
 {
+    private readonly UnitOfWork _unitOfWork = new();
+
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers() {
-        return await context.Users
-          .Select(u => new UserDto(u))
-          .ToListAsync();
+    public async Task<ActionResult<IEnumerable<User>>> GetUsers([FromHeader(Name = "authorization")] string authorization)
+    {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
+        try {
+            var users = await _unitOfWork.UserRepository.Get();
+
+            return Ok(users);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpPost]
-    public async Task<ActionResult<UserDto>> PostUser(UserDto user) {
-        context.Users.Add(Utility.Database.Models.User.FromDto(user));
-        await context.SaveChangesAsync();
+    public async Task<ActionResult<User>> PostUser(
+        [FromHeader(Name = "authorization")] string authorization,
+        [Bind("Name,Email,Password")]
+        User user) {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
+        user.Sanitize();
+
+        if (!user.IsValidEmail()) return BadRequest("Invalid email!");
+
+        try
+        {
+            // Check if the email is already in use.
+            var foundUser = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
+            if (foundUser != null && foundUser.Any())
+            {
+                return BadRequest("Email already in use!");
+            }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+            _unitOfWork.UserRepository.Insert(user);
+            await _unitOfWork.Save();
+
+            return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<UserDto>> GetUser(int id)
+    public async Task<ActionResult<User>> GetUser(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var user = await context.Users.FindAsync(id);
-        if (user == null)
-        {
-            return NotFound();
-        }
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        return new UserDto(user);
+        try
+        {
+            var user = await _unitOfWork.UserRepository.GetById(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(user);
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await UserExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<UserDto>> PutUser(int id, UserDto user)
+    public async Task<ActionResult<User>> PutUser(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id,
+        [Bind("UserId,Name,Email,Password")]
+        User user)
     {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
         if (id != user.UserId)
         {
             return BadRequest();
         }
 
-        var foundUser = await context.Users.FindAsync(id);
-        if (foundUser == null)
-        {
-            return NotFound();
-        }
+        user.Sanitize();
 
-        foundUser = Utility.Database.Models.User.FromDto(user);
-        context.Users
-            .Update(foundUser);
+        if (!user.IsValidEmail())
+        {
+            return BadRequest("Invalid email!");
+        }
 
         try
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException) when (!UserExists(id))
-        {
-            return NotFound();
-        }
+            // Check if the email is already in use.
+            var foundUser = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
+            if (foundUser != null)
+            {
+                return BadRequest("Email already in use!");
+            }
 
-        return NoContent();
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
+            _unitOfWork.UserRepository.Update(user);
+            await _unitOfWork.Save();
+
+            return Ok(user);
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await UserExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteUser(int id)
+    public async Task<IActionResult> DeleteUser(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var user = await context.Users.FindAsync(id);
-        if (user == null)
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
+        try {
+            var user = await _unitOfWork.UserRepository.GetById(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            _unitOfWork.UserRepository.Delete(user);
+            await _unitOfWork.Save();
+
+            return NoContent();
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await UserExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<Authorization>> Login([FromBody] string email, [FromBody] string password)
+    {
+        var user = await _unitOfWork.UserRepository.Get(filter: u => u.Email == email);
+        if (user == null || !user.Any())
         {
             return NotFound();
         }
 
-        context.Users.Remove(user);
-        await context.SaveChangesAsync();
-        
-        return NoContent();
+        var foundUser = user.First();
+        if (!BCrypt.Net.BCrypt.Verify(password, foundUser.Password))
+        {
+            return Unauthorized();
+        }
+
+        return new Authorization { Role = Role.User, Token = Authorization.GenerateToken(foundUser), User = foundUser };
     }
 
-    private bool UserExists(int id)
+    private async Task<bool> UserExists(int id)
     {
-        return context.Users.Any(u => u.UserId == id);
+        return await _unitOfWork.UserRepository.Get(filter: u => u.UserId == id) != null;
     }
 }
-

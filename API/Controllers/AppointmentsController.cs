@@ -1,9 +1,5 @@
-﻿using API.Controllers.DTO.Appointments;
-using API.Controllers.DTO.Employees;
-using API.Controllers.DTO.Users;
+﻿using API.Utility.Database.DAL;
 using API.Utility.Database.Models;
-using Database;
-using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,97 +7,138 @@ namespace API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AppointmentsController(DataContext context) : ControllerBase
+public class AppointmentsController : ControllerBase
 {
+    private readonly UnitOfWork _unitOfWork = new();
+
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<BaseAppointmentDto>>> GetAppointment()
+    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments([FromHeader(Name = "authorization")] string authorization)
     {
-        return await context.Appointments
-          .Select(a => a.Adapt<BaseAppointmentDto>())
-          .ToListAsync();
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
+        try {
+            var appointments = await _unitOfWork.AppointmentRepository.Get();
+
+            return Ok(appointments);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpPost]
-    public async Task<ActionResult<BaseAppointmentDto>> PostAppointment(CreateAppointmentDto appointment)
+    public async Task<ActionResult<Appointment>> PostAppointment(
+        [FromHeader(Name = "authorization")] string authorization,
+        [Bind("Date,Barber,Customer,Price,Notes")] Appointment appointment)
     {
-        if (appointment.Date < DateTime.Now) return BadRequest("Invalid date!");
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        var barber = await context.Employees.FindAsync(appointment.BarberId);
-        if (barber == null) return BadRequest("Barber not found!");
+        try
+        {
+            _unitOfWork.AppointmentRepository.Insert(appointment);
+            await _unitOfWork.Save();
 
-        appointment.Barber = barber.Adapt<BaseEmployeeDto>();
-
-        var customer = await context.Users.FindAsync(appointment.CustomerId);
-        if (customer == null) return BadRequest("Customer not found!");
-
-        appointment.Customer = customer.Adapt<BaseUserDto>();
-
-        context.Appointments.Add(appointment.Adapt<Appointment>());
-        await context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetAppointment), new { id = appointment.AppointmentId }, appointment);
+            return CreatedAtAction(nameof(GetAppointment), new { id = appointment.AppointmentId }, appointment);
+        } catch (DbUpdateConcurrencyException)
+        {
+            return BadRequest();
+        }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<BaseAppointmentDto>> GetAppointment(int id)
+    public async Task<ActionResult<Appointment>> GetAppointment(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var appointment = await context.Appointments.FindAsync(id);
-        if (appointment == null)
-        {
-            return NotFound();
-        }
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
 
-        return appointment.Adapt<BaseAppointmentDto>();
+        try
+        {
+            var appointment = await _unitOfWork.AppointmentRepository.GetById(id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(appointment);
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await AppointmentExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<BaseAppointmentDto>> PutAppointment(int id, UpdateAppointmentDto appointment)
+    public async Task<ActionResult<Appointment>> PutAppointment(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id,
+        [Bind("AppointmentId,Date,Barber,Customer,Price,Notes")]
+        Appointment appointment)
     {
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
         if (id != appointment.AppointmentId)
         {
             return BadRequest();
         }
 
-        var foundAppointment = await context.Appointments.FindAsync(id);
-        if (foundAppointment == null)
-        {
-            return NotFound();
-        }
-
-        foundAppointment = appointment.Adapt(foundAppointment);
-        context.Appointments
-            .Update(foundAppointment);
-
         try
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException) when (!AppointmentExists(id))
-        {
-            return NotFound();
-        }
+            _unitOfWork.AppointmentRepository.Update(appointment);
+            await _unitOfWork.Save();
 
-        return NoContent();
+            return Ok(appointment);
+        } catch (DbUpdateConcurrencyException)
+        {
+            if (!await AppointmentExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
+        }
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteAppointment(int id)
+    public async Task<IActionResult> DeleteAppointment(
+        [FromHeader(Name = "authorization")] string authorization,
+        int id)
     {
-        var appointment = await context.Appointments.FindAsync(id);
-        if (appointment == null)
+        var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
+        if (auth == null) return Unauthorized();
+
+        try {
+            var appointment = await _unitOfWork.AppointmentRepository.GetById(id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            _unitOfWork.AppointmentRepository.Delete(appointment);
+            await _unitOfWork.Save();
+
+            return NoContent();
+        } catch (DbUpdateConcurrencyException)
         {
-            return NotFound();
+            if (!await AppointmentExists(id))
+            {
+                return NotFound();
+            }
+
+            throw;
         }
-
-        context.Appointments.Remove(appointment);
-        await context.SaveChangesAsync();
-
-        return NoContent();
     }
 
-    private bool AppointmentExists(int id)
+    private async Task<bool> AppointmentExists(int id)
     {
-        return context.Appointments.Any(a => a.AppointmentId == id);
+        return await _unitOfWork.AppointmentRepository.GetById(id) != null;
     }
-
 }

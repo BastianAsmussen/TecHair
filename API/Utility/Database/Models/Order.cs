@@ -7,5 +7,5 @@ public class Order
     public DateTime Date { get; set; }
 
     public Appointment Appointment { get; set; }
-    public List<Product> Products { get; set; }
+    public IEnumerable<Product> Products { get; set; }
 }

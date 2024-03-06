@@ -37,7 +37,9 @@ public class ProductsController : ControllerBase
         try
         {
             if (product.PriceHistory.First().Value < 0) return BadRequest("Invalid price!");
-            if (await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name) != null)
+
+            var foundProduct = await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name);
+            if (foundProduct != null && foundProduct.Any())
                 return BadRequest("Product already exists!");
 
             product.Description ??= "";

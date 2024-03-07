@@ -1,7 +1,6 @@
 using API.Utility;
-using Config.Net;
 using API.Utility.Database;
-using Microsoft.EntityFrameworkCore;
+using Config.Net;
 
 namespace API;
 

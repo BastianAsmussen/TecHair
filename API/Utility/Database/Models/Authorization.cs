@@ -11,13 +11,11 @@ public class Authorization
 {
     public int AuthorizationId { get; set; }
 
-    [Required]
-    public string Token { get; set; }
+    [Required] public string Token { get; set; }
 
-    [Required]
-    public Role Role { get; set; }
-    [Required]
-    public User User { get; set; }
+    [Required] public Role Role { get; set; }
+
+    [Required] public User User { get; set; }
 
     public static async Task<Authorization?> Validate(UnitOfWork unitOfWork, string token, Role requiredRole)
     {
@@ -28,9 +26,10 @@ public class Authorization
         token = token.Replace("Bearer ", "").Trim();
 
         // Allow the secret to be used as a token for testing.
-        if (token == Program.Settings.Secret) return new Authorization { Role = Role.Admin, Token = token, User = new User { UserId = 0 } };
+        if (token == Program.Settings.Secret)
+            return new Authorization { Role = Role.Admin, Token = token, User = new User { UserId = 0 } };
 
-        var results = await unitOfWork.AuthorizationRepository.Get(filter: a => a.Token == token);
+        var results = await unitOfWork.AuthorizationRepository.Get(a => a.Token == token);
         if (results == null || !results.Any())
             return null;
 
@@ -46,7 +45,8 @@ public class Authorization
         {
             Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, user.UserId.ToString()) }),
             Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            SigningCredentials =
+                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);

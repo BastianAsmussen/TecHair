@@ -19,7 +19,9 @@ public sealed class DataContext : DbContext
     public DbSet<Price> Prices { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseNpgsql(Program.Settings.ConnectionString);
+    {
+        optionsBuilder.UseNpgsql(Program.Settings.ConnectionString);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

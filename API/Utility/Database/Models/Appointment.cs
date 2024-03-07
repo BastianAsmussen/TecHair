@@ -4,11 +4,11 @@ public class Appointment
 {
     public int AppointmentId { get; set; }
 
-    public DateTime Date { get; set;  }
+    public DateTime Date { get; set; }
     public AppointmentStatus Status { get; set; }
 
     public Employee Barber { get; set; }
-    public User Customer { get; set;  }
+    public User Customer { get; set; }
 
     public decimal Price { get; set; }
     public string? Notes { get; set; }

@@ -1,4 +1,4 @@
 {
-    "DatabaseConnection": "Host=1.0.0.2;Database=techair;Username=root;Password=toor",
-    "Secret": "toor"
+  "DatabaseConnection": "Host=1.0.0.2;Database=techair;Username=root;Password=toor",
+  "Secret": "toor"
 }

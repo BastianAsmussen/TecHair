@@ -15,10 +15,7 @@ public sealed class GenericRepository<T>(DbContext context)
     {
         IQueryable<T> query = _dbSet;
 
-        if (filter != null)
-        {
-            query = query.Where(filter);
-        }
+        if (filter != null) query = query.Where(filter);
 
         query = includeProperties
             .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
@@ -54,10 +51,7 @@ public sealed class GenericRepository<T>(DbContext context)
 
     public void Delete(T entity)
     {
-        if (context.Entry(entity).State == EntityState.Detached)
-        {
-            _dbSet.Attach(entity);
-        }
+        if (context.Entry(entity).State == EntityState.Detached) _dbSet.Attach(entity);
 
         _dbSet.Remove(entity);
     }

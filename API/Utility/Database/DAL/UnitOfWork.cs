@@ -6,30 +6,46 @@ public sealed class UnitOfWork : IDisposable
 {
     private readonly DataContext _context = new();
 
+    private GenericRepository<Appointment>? _appointmentRepository;
+
     private GenericRepository<Authorization>? _authorizationRepository;
-    public GenericRepository<Authorization> AuthorizationRepository => _authorizationRepository ??= new GenericRepository<Authorization>(_context);
+
+    private bool _disposed;
+
+    private GenericRepository<Employee>? _employeeRepository;
+
+    private GenericRepository<Price>? _priceRepository;
+
+    private GenericRepository<Product>? _productRepository;
 
     private GenericRepository<User>? _userRepository;
+
+    public GenericRepository<Authorization> AuthorizationRepository =>
+        _authorizationRepository ??= new GenericRepository<Authorization>(_context);
+
     public GenericRepository<User> UserRepository => _userRepository ??= new GenericRepository<User>(_context);
-    
-    private GenericRepository<Employee>? _employeeRepository;
-    public GenericRepository<Employee> EmployeeRepository => _employeeRepository ??= new GenericRepository<Employee>(_context);
-    
-    private GenericRepository<Appointment>? _appointmentRepository;
-    public GenericRepository<Appointment> AppointmentRepository => _appointmentRepository ??= new GenericRepository<Appointment>(_context);
-    
-    private GenericRepository<Product>? _productRepository;
-    public GenericRepository<Product> ProductRepository => _productRepository ??= new GenericRepository<Product>(_context);
-    
-    private GenericRepository<Price>? _priceRepository;
+
+    public GenericRepository<Employee> EmployeeRepository =>
+        _employeeRepository ??= new GenericRepository<Employee>(_context);
+
+    public GenericRepository<Appointment> AppointmentRepository =>
+        _appointmentRepository ??= new GenericRepository<Appointment>(_context);
+
+    public GenericRepository<Product> ProductRepository =>
+        _productRepository ??= new GenericRepository<Product>(_context);
+
     public GenericRepository<Price> PriceRepository => _priceRepository ??= new GenericRepository<Price>(_context);
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     public async Task Save()
     {
         await _context.SaveChangesAsync();
     }
-
-    private bool _disposed;
 
     private async void Dispose(bool disposing)
     {
@@ -37,11 +53,5 @@ public sealed class UnitOfWork : IDisposable
         if (disposing) await _context.DisposeAsync();
 
         _disposed = true;
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }

@@ -12,16 +12,19 @@ public class AppointmentsController : ControllerBase
     private readonly UnitOfWork _unitOfWork = new();
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments([FromHeader(Name = "authorization")] string authorization)
+    public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments(
+        [FromHeader(Name = "authorization")] string authorization)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var appointments = await _unitOfWork.AppointmentRepository.Get();
 
             return Ok(appointments);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -30,7 +33,8 @@ public class AppointmentsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Appointment>> PostAppointment(
         [FromHeader(Name = "authorization")] string authorization,
-        [Bind("Date,Barber,Customer,Price,Notes")] Appointment appointment)
+        [Bind("Date,Barber,Customer,Price,Notes")]
+        Appointment appointment)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
@@ -41,7 +45,8 @@ public class AppointmentsController : ControllerBase
             await _unitOfWork.Save();
 
             return CreatedAtAction(nameof(GetAppointment), new { id = appointment.AppointmentId }, appointment);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -58,18 +63,13 @@ public class AppointmentsController : ControllerBase
         try
         {
             var appointment = await _unitOfWork.AppointmentRepository.GetById(id);
-            if (appointment == null)
-            {
-                return NotFound();
-            }
+            if (appointment == null) return NotFound();
 
             return Ok(appointment);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await AppointmentExists(id))
-            {
-                return NotFound();
-            }
+            if (!await AppointmentExists(id)) return NotFound();
 
             throw;
         }
@@ -85,10 +85,7 @@ public class AppointmentsController : ControllerBase
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        if (id != appointment.AppointmentId)
-        {
-            return BadRequest();
-        }
+        if (id != appointment.AppointmentId) return BadRequest();
 
         try
         {
@@ -96,12 +93,10 @@ public class AppointmentsController : ControllerBase
             await _unitOfWork.Save();
 
             return Ok(appointment);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await AppointmentExists(id))
-            {
-                return NotFound();
-            }
+            if (!await AppointmentExists(id)) return NotFound();
 
             throw;
         }
@@ -115,23 +110,19 @@ public class AppointmentsController : ControllerBase
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var appointment = await _unitOfWork.AppointmentRepository.GetById(id);
-            if (appointment == null)
-            {
-                return NotFound();
-            }
+            if (appointment == null) return NotFound();
 
             _unitOfWork.AppointmentRepository.Delete(appointment);
             await _unitOfWork.Save();
 
             return NoContent();
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await AppointmentExists(id))
-            {
-                return NotFound();
-            }
+            if (!await AppointmentExists(id)) return NotFound();
 
             throw;
         }

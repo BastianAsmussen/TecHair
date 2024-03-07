@@ -12,15 +12,19 @@ public class ProductsController : ControllerBase
     private readonly UnitOfWork _unitOfWork = new();
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetProducts([FromHeader(Name = "authorization")] string authorization) {
+    public async Task<ActionResult<IEnumerable<Product>>> GetProducts(
+        [FromHeader(Name = "authorization")] string authorization)
+    {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var products = await _unitOfWork.ProductRepository.Get();
 
             return Ok(products);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -30,15 +34,17 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<Product>> PostProduct(
         [FromHeader(Name = "authorization")] string authorization,
         [Bind("Name,Description,PriceHistory")]
-        Product product) {
+        Product product)
+    {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
         try
         {
-            if (product.PriceHistory.First().Value < 0) return BadRequest("Invalid price!");
+            // If all prices sum to less than 0, return a bad request.
+            if (product.PriceHistory.Sum(p => p.Value) < 0) return BadRequest("Invalid price!");
 
-            var foundProduct = await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name);
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
             if (foundProduct != null && foundProduct.Any())
                 return BadRequest("Product already exists!");
 
@@ -48,7 +54,8 @@ public class ProductsController : ControllerBase
             await _unitOfWork.Save();
 
             return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -65,18 +72,14 @@ public class ProductsController : ControllerBase
         try
         {
             var product = await _unitOfWork.ProductRepository.GetById(id);
-            if (product == null)
-            {
-                return NotFound();
-            }
+            if (product == null) return NotFound();
 
             return Ok(product);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             if (!await ProductExists(id))
-            {
                 return NotFound();
-            }
 
             throw;
         }
@@ -93,26 +96,28 @@ public class ProductsController : ControllerBase
         if (auth == null) return Unauthorized();
 
         if (id != product.ProductId)
-        {
             return BadRequest();
-        }
 
         try
         {
-            if (product.PriceHistory.First().Value < 0) return BadRequest("Invalid price!");
-            if (await _unitOfWork.ProductRepository.Get(filter: p => p.Name == product.Name) != null)
+            // If all prices sum to less than 0, return a bad request.
+            if (product.PriceHistory.Sum(p => p.Value) < 0)
+                return BadRequest("Invalid price!");
+
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
+
+            // If the product already exists and the ID is not the same, return a bad request.
+            if (foundProduct != null && foundProduct.Any(p => p.ProductId != product.ProductId))
                 return BadRequest("Product already exists!");
 
             _unitOfWork.ProductRepository.Update(product);
             await _unitOfWork.Save();
 
             return NoContent();
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await ProductExists(id))
-            {
-                return NotFound();
-            }
+            if (!await ProductExists(id)) return NotFound();
 
             throw;
         }
@@ -126,23 +131,19 @@ public class ProductsController : ControllerBase
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var product = await _unitOfWork.ProductRepository.GetById(id);
-            if (product == null)
-            {
-                return NotFound();
-            }
+            if (product == null) return NotFound();
 
             _unitOfWork.ProductRepository.Delete(product);
             await _unitOfWork.Save();
 
             return NoContent();
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await ProductExists(id))
-            {
-                return NotFound();
-            }
+            if (!await ProductExists(id)) return NotFound();
 
             throw;
         }
@@ -150,6 +151,6 @@ public class ProductsController : ControllerBase
 
     private async Task<bool> ProductExists(int id)
     {
-        return await _unitOfWork.ProductRepository.Get(filter: p => p.ProductId == id) != null;
+        return await _unitOfWork.ProductRepository.Get(p => p.ProductId == id) != null;
     }
 }

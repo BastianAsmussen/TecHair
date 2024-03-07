@@ -1,4 +1,4 @@
 {
-    "ConnectionString": "Host=1.0.0.2;Database=techair;Username=root;Password=toor",
+    "ConnectionString": "Host=192.168.0.2;Database=techair;Username=root;Password=toor",
     "Secret": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6IjAiLCJuYmYiOjE3MDk3MjUzMzYsImV4cCI6MTcwOTcyODkzNiwiaWF0IjoxNzA5NzI1MzM2fQ.cWkStvWKBCqkaczVuxOr6_FmT2PlI4lokSuJN_fhZwQ"
 }

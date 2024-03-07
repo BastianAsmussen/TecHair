@@ -1,8 +1,9 @@
 using API.Controllers.DTO;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using API.Utility.Database.DAL;
 using API.Utility.Database.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace API.Controllers;
 
@@ -13,16 +14,19 @@ public class UsersController : ControllerBase
     private readonly UnitOfWork _unitOfWork = new();
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetUsers([FromHeader(Name = "authorization")] string authorization)
+    public async Task<ActionResult<IEnumerable<User>>> GetUsers(
+        [FromHeader(Name = "authorization")] string authorization)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var users = await _unitOfWork.UserRepository.Get();
 
             return Ok(users);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -31,8 +35,8 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<User>> PostUser(
         [FromHeader(Name = "authorization")] string authorization,
-        [Bind("Name,Email,Password")]
-        User user) {
+        [Bind("Name,Email,Password")] User user)
+    {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
@@ -43,11 +47,8 @@ public class UsersController : ControllerBase
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
-            if (foundUser != null && foundUser.Any())
-            {
-                return BadRequest("Email already in use!");
-            }
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+            if (foundUser != null && foundUser.Any()) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
 
@@ -55,7 +56,8 @@ public class UsersController : ControllerBase
             await _unitOfWork.Save();
 
             return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -72,18 +74,13 @@ public class UsersController : ControllerBase
         try
         {
             var user = await _unitOfWork.UserRepository.GetById(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
             return Ok(user);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await UserExists(id))
-            {
-                return NotFound();
-            }
+            if (!await UserExists(id)) return NotFound();
 
             throw;
         }
@@ -93,32 +90,22 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<User>> PutUser(
         [FromHeader(Name = "authorization")] string authorization,
         int id,
-        [Bind("UserId,Name,Email,Password")]
-        User user)
+        [Bind("UserId,Name,Email,Password")] User user)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        if (id != user.UserId)
-        {
-            return BadRequest();
-        }
+        if (id != user.UserId) return BadRequest("ID mismatch!");
 
         user.Sanitize();
 
-        if (!user.IsValidEmail())
-        {
-            return BadRequest("Invalid email!");
-        }
+        if (!user.IsValidEmail()) return BadRequest("Invalid email!");
 
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
-            if (foundUser != null && foundUser.Any())
-            {
-                return BadRequest("Email already in use!");
-            }
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+            if (foundUser != null && foundUser.Any(u => u.UserId != user.UserId)) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
 
@@ -126,12 +113,10 @@ public class UsersController : ControllerBase
             await _unitOfWork.Save();
 
             return Ok(user);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await UserExists(id))
-            {
-                return NotFound();
-            }
+            if (!await UserExists(id)) return NotFound();
 
             throw;
         }
@@ -145,23 +130,19 @@ public class UsersController : ControllerBase
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var user = await _unitOfWork.UserRepository.GetById(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            if (user == null) return NotFound();
 
             _unitOfWork.UserRepository.Delete(user);
             await _unitOfWork.Save();
 
             return NoContent();
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await UserExists(id))
-            {
-                return NotFound();
-            }
+            if (!await UserExists(id)) return NotFound();
 
             throw;
         }
@@ -170,23 +151,17 @@ public class UsersController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<Authorization>> Login([FromBody] UserLogin user)
     {
-        var foundUsers = await _unitOfWork.UserRepository.Get(filter: u => u.Email == user.Email);
-        if (foundUsers == null || !foundUsers.Any())
-        {
-            return NotFound();
-        }
+        var foundUsers = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+        if (foundUsers.IsNullOrEmpty()) return Unauthorized("Invalid credentials!");
 
         var foundUser = foundUsers.First();
-        if (!BCrypt.Net.BCrypt.Verify(user.Password, foundUser.Password))
-        {
-            return Unauthorized();
-        }
+        if (!BCrypt.Net.BCrypt.Verify(user.Password, foundUser.Password)) return Unauthorized("Invalid credentials!");
 
         return new Authorization { Role = Role.User, Token = Authorization.GenerateToken(foundUser), User = foundUser };
     }
 
     private async Task<bool> UserExists(int id)
     {
-        return await _unitOfWork.UserRepository.Get(filter: u => u.UserId == id) != null;
+        return await _unitOfWork.UserRepository.Get(u => u.UserId == id) != null;
     }
 }

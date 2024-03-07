@@ -60,7 +60,7 @@ public class ProductsController : ControllerBase
                     new()
                     {
                         Value = product.Price,
-                        Date = DateTime.Now,
+                        Date = DateTime.UtcNow,
                     }
                 }
             };

@@ -1,27 +1,30 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using API.Utility.Database.DAL;
 using API.Utility.Database.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class EmployeesController: ControllerBase
+public class EmployeesController : ControllerBase
 {
     private readonly UnitOfWork _unitOfWork = new();
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees([FromHeader(Name = "authorization")] string authorization)
+    public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees(
+        [FromHeader(Name = "authorization")] string authorization)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var employees = await _unitOfWork.EmployeeRepository.Get();
 
             return Ok(employees);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -54,7 +57,8 @@ public class EmployeesController: ControllerBase
             await _unitOfWork.Save();
 
             return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, employee);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
             return BadRequest();
         }
@@ -71,18 +75,13 @@ public class EmployeesController: ControllerBase
         try
         {
             var employee = await _unitOfWork.EmployeeRepository.GetById(id);
-            if (employee == null)
-            {
-                return NotFound();
-            }
+            if (employee == null) return NotFound();
 
             return Ok(employee);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await EmployeeExists(id))
-            {
-                return NotFound();
-            }
+            if (!await EmployeeExists(id)) return NotFound();
 
             throw;
         }
@@ -92,16 +91,12 @@ public class EmployeesController: ControllerBase
     public async Task<ActionResult<Employee>> PutEmployee(
         [FromHeader(Name = "authorization")] string authorization,
         int id,
-        [Bind("EmployeeId,Manager,User")]
-        Employee employee)
+        [Bind("EmployeeId,Manager,User")] Employee employee)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        if (id != employee.EmployeeId)
-        {
-            return BadRequest();
-        }
+        if (id != employee.EmployeeId) return BadRequest();
 
         try
         {
@@ -122,12 +117,10 @@ public class EmployeesController: ControllerBase
             await _unitOfWork.Save();
 
             return Ok(employee);
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await EmployeeExists(id))
-            {
-                return NotFound();
-            }
+            if (!await EmployeeExists(id)) return NotFound();
 
             throw;
         }
@@ -141,23 +134,19 @@ public class EmployeesController: ControllerBase
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
 
-        try {
+        try
+        {
             var employee = await _unitOfWork.EmployeeRepository.GetById(id);
-            if (employee == null)
-            {
-                return NotFound();
-            }
+            if (employee == null) return NotFound();
 
             _unitOfWork.EmployeeRepository.Delete(employee);
             await _unitOfWork.Save();
 
             return NoContent();
-        } catch (DbUpdateConcurrencyException)
+        }
+        catch (DbUpdateConcurrencyException)
         {
-            if (!await EmployeeExists(id))
-            {
-                return NotFound();
-            }
+            if (!await EmployeeExists(id)) return NotFound();
 
             throw;
         }
@@ -165,6 +154,6 @@ public class EmployeesController: ControllerBase
 
     private async Task<bool> EmployeeExists(int id)
     {
-        return await _unitOfWork.EmployeeRepository.Get(filter: e => e.EmployeeId == id) != null;
+        return await _unitOfWork.EmployeeRepository.Get(e => e.EmployeeId == id) != null;
     }
 }

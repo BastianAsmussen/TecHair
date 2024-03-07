@@ -1,3 +1,4 @@
+using API.Controllers.DTO;
 using API.Utility.Database.DAL;
 using API.Utility.Database.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -33,8 +34,8 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Product>> PostProduct(
         [FromHeader(Name = "authorization")] string authorization,
-        [Bind("Name,Description,PriceHistory")]
-        Product product)
+        [Bind("Name,Description,Price")]
+        NewProduct product)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
@@ -42,7 +43,7 @@ public class ProductsController : ControllerBase
         try
         {
             // If all prices sum to less than 0, return a bad request.
-            if (product.PriceHistory.Sum(p => p.Value) < 0) return BadRequest("Invalid price!");
+            if (product.Price < 0) return BadRequest("Invalid price!");
 
             var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
             if (foundProduct != null && foundProduct.Any())
@@ -50,10 +51,24 @@ public class ProductsController : ControllerBase
 
             product.Description ??= "";
 
-            _unitOfWork.ProductRepository.Insert(product);
+            var actualProduct = new Product
+            {
+                Name = product.Name,
+                Description = product.Description,
+                PriceHistory = new List<Price>
+                {
+                    new()
+                    {
+                        Value = product.Price,
+                        Date = DateTime.Now,
+                    }
+                }
+            };
+
+            _unitOfWork.ProductRepository.Insert(actualProduct);
             await _unitOfWork.Save();
 
-            return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
+            return CreatedAtAction(nameof(GetProduct), new { id = actualProduct.ProductId }, actualProduct);
         }
         catch (DbUpdateConcurrencyException)
         {

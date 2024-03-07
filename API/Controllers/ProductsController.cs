@@ -34,7 +34,7 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Product>> PostProduct(
         [FromHeader(Name = "authorization")] string authorization,
-        [Bind("Name,Description,Price")]
+        [Bind("Name,Description,Image,Stock,Price")]
         NewProduct product)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
@@ -42,19 +42,21 @@ public class ProductsController : ControllerBase
 
         try
         {
-            // If all prices sum to less than 0, return a bad request.
+            // If the stock is less than 0, return a bad request.
+            if (product.Stock < 0) return BadRequest("Invalid stock!");
+
+            // If the price is less than 0, return a bad request.
             if (product.Price < 0) return BadRequest("Invalid price!");
 
             var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
             if (foundProduct != null && foundProduct.Any())
                 return BadRequest("Product already exists!");
 
-            product.Description ??= "";
-
             var actualProduct = new Product
             {
                 Name = product.Name,
                 Description = product.Description,
+                Image = product.Image,
                 PriceHistory = new List<Price>
                 {
                     new()
@@ -104,7 +106,7 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<Product>> PutProduct(
         [FromHeader(Name = "authorization")] string authorization,
         int id,
-        [Bind("ProductId,Name,Description,PriceHistory")]
+        [Bind("ProductId,Name,Description,Image,Stock,PriceHistory")]
         Product product)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
@@ -115,6 +117,9 @@ public class ProductsController : ControllerBase
 
         try
         {
+            // If the stock is less than 0, return a bad request.
+            if (product.Stock < 0) return BadRequest("Invalid stock!");
+
             // If all prices sum to less than 0, return a bad request.
             if (product.PriceHistory.Sum(p => p.Value) < 0)
                 return BadRequest("Invalid price!");

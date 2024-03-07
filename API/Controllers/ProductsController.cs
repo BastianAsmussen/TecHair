@@ -21,7 +21,7 @@ public class ProductsController : ControllerBase
 
         try
         {
-            var products = await _unitOfWork.ProductRepository.Get();
+            var products = await _unitOfWork.ProductRepository.Get(includeProperties: "PriceHistory");
 
             return Ok(products);
         }
@@ -86,10 +86,10 @@ public class ProductsController : ControllerBase
 
         try
         {
-            var product = await _unitOfWork.ProductRepository.GetById(id);
-            if (product == null) return NotFound();
+            var products = await _unitOfWork.ProductRepository.Get(p => p.ProductId == id, includeProperties: "PriceHistory");
+            if (products == null) return NotFound();
 
-            return Ok(product);
+            return Ok(products.First());
         }
         catch (DbUpdateConcurrencyException)
         {

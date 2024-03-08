@@ -47,7 +47,7 @@ public class UsersController : ControllerBase
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
             if (foundUser != null && foundUser.Any()) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
@@ -104,7 +104,7 @@ public class UsersController : ControllerBase
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
             if (foundUser != null && foundUser.Any(u => u.UserId != user.UserId)) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);

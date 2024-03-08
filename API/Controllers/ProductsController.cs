@@ -42,13 +42,17 @@ public class ProductsController : ControllerBase
 
         try
         {
+            // Make sure that the image is a valid URL.
+            if (!Uri.IsWellFormedUriString(product.Image, UriKind.Absolute))
+                return BadRequest("Invalid image!");
+
             // If the stock is less than 0, return a bad request.
             if (product.Stock < 0) return BadRequest("Invalid stock!");
 
             // If the price is less than 0, return a bad request.
             if (product.Price < 0) return BadRequest("Invalid price!");
 
-            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.Equals(product.Name, StringComparison.CurrentCultureIgnoreCase));
             if (foundProduct != null && foundProduct.Any())
                 return BadRequest("Product already exists!");
 
@@ -117,6 +121,10 @@ public class ProductsController : ControllerBase
 
         try
         {
+            // Make sure that the image is a valid URL.
+            if (!Uri.IsWellFormedUriString(product.Image, UriKind.Absolute))
+                return BadRequest("Invalid image!");
+
             // If the stock is less than 0, return a bad request.
             if (product.Stock < 0) return BadRequest("Invalid stock!");
 
@@ -124,7 +132,7 @@ public class ProductsController : ControllerBase
             if (product.PriceHistory.Sum(p => p.Value) < 0)
                 return BadRequest("Invalid price!");
 
-            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.Equals(product.Name, StringComparison.CurrentCultureIgnoreCase));
 
             // If the product already exists and the ID is not the same, return a bad request.
             if (foundProduct != null && foundProduct.Any(p => p.ProductId != product.ProductId))

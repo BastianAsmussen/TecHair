@@ -35,10 +35,17 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<User>> PostUser(
         [FromHeader(Name = "authorization")] string authorization,
-        [Bind("Name,Email,Password")] User user)
+        [Bind("Name,Email,Password,Role")] NewUser newUser)
     {
         var auth = await Authorization.Validate(_unitOfWork, authorization, Role.Admin);
         if (auth == null) return Unauthorized();
+
+        var user = new User
+        {
+            Name = newUser.Name,
+            Email = newUser.Email,
+            Password = newUser.Password,
+        };
 
         user.Sanitize();
 
@@ -52,7 +59,16 @@ public class UsersController : ControllerBase
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
 
+            // Generate the authorization data for the user.
+            var credentials = new Authorization
+            {
+                Role = newUser.Role,
+                Token = Authorization.GenerateToken(user),
+                User = user
+            };
+
             _unitOfWork.UserRepository.Insert(user);
+            _unitOfWork.AuthorizationRepository.Insert(credentials);
             await _unitOfWork.Save();
 
             return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
@@ -149,15 +165,20 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<Authorization>> Login([FromBody] UserLogin user)
+    public async Task<ActionResult<UserAuthorization>> Login([FromBody] UserCredentials user)
     {
-        var foundUsers = await _unitOfWork.UserRepository.Get(u => u.Email == user.Email);
+        var foundUsers = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
         if (foundUsers.IsNullOrEmpty()) return Unauthorized("Invalid credentials!");
 
         var foundUser = foundUsers.First();
         if (!BCrypt.Net.BCrypt.Verify(user.Password, foundUser.Password)) return Unauthorized("Invalid credentials!");
 
-        return new Authorization { Role = Role.User, Token = Authorization.GenerateToken(foundUser), User = foundUser };
+        // Get the authorization data for the user.
+        var foundCredentials = await _unitOfWork.AuthorizationRepository.Get(a => a.User.UserId == foundUser.UserId);
+        if (foundCredentials.IsNullOrEmpty()) return Unauthorized("Invalid credentials!");
+
+        var foundAuthorization = foundCredentials.First();
+        return new UserAuthorization { Role = foundAuthorization.Role, Token = foundAuthorization.Token };
     }
 
     private async Task<bool> UserExists(int id)

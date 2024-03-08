@@ -61,6 +61,7 @@ public class ProductsController : ControllerBase
                 Name = product.Name,
                 Description = product.Description,
                 Image = product.Image,
+                Stock = product.Stock,
                 PriceHistory = new List<Price>
                 {
                     new()

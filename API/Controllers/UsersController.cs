@@ -54,7 +54,7 @@ public class UsersController : ControllerBase
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.ToLower() == user.Email.ToLower());
             if (foundUser != null && foundUser.Any()) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
@@ -120,7 +120,7 @@ public class UsersController : ControllerBase
         try
         {
             // Check if the email is already in use.
-            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
+            var foundUser = await _unitOfWork.UserRepository.Get(u => u.Email.ToLower() == user.Email.ToLower());
             if (foundUser != null && foundUser.Any(u => u.UserId != user.UserId)) return BadRequest("Email already in use!");
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
@@ -167,7 +167,7 @@ public class UsersController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<UserAuthorization>> Login([FromBody] UserCredentials user)
     {
-        var foundUsers = await _unitOfWork.UserRepository.Get(u => u.Email.Equals(user.Email, StringComparison.CurrentCultureIgnoreCase));
+        var foundUsers = await _unitOfWork.UserRepository.Get(u => u.Email.ToLower() == user.Email.ToLower());
         if (foundUsers.IsNullOrEmpty()) return Unauthorized("Invalid credentials!");
 
         var foundUser = foundUsers.First();

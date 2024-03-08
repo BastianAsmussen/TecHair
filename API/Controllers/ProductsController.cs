@@ -52,7 +52,7 @@ public class ProductsController : ControllerBase
             // If the price is less than 0, return a bad request.
             if (product.Price < 0) return BadRequest("Invalid price!");
 
-            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.Equals(product.Name, StringComparison.CurrentCultureIgnoreCase));
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
             if (foundProduct != null && foundProduct.Any())
                 return BadRequest("Product already exists!");
 
@@ -132,7 +132,7 @@ public class ProductsController : ControllerBase
             if (product.PriceHistory.Sum(p => p.Value) < 0)
                 return BadRequest("Invalid price!");
 
-            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.Equals(product.Name, StringComparison.CurrentCultureIgnoreCase));
+            var foundProduct = await _unitOfWork.ProductRepository.Get(p => p.Name.ToLower() == product.Name.ToLower());
 
             // If the product already exists and the ID is not the same, return a bad request.
             if (foundProduct != null && foundProduct.Any(p => p.ProductId != product.ProductId))

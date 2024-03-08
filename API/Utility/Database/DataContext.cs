@@ -17,6 +17,7 @@ public sealed class DataContext : DbContext
     public DbSet<Order> Orders { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<Price> Prices { get; set; }
+    public DbSet<Order> Orders { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -32,5 +33,6 @@ public sealed class DataContext : DbContext
         modelBuilder.Entity<Order>().ToTable("Orders");
         modelBuilder.Entity<Product>().ToTable("Products");
         modelBuilder.Entity<Price>().ToTable("Prices");
+        modelBuilder.Entity<Order>().ToTable("Orders");
     }
 }

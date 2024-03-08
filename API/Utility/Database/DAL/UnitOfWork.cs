@@ -20,6 +20,8 @@ public sealed class UnitOfWork : IDisposable
 
     private GenericRepository<User>? _userRepository;
 
+    private GenericRepository<Order>? _orderRepository;
+
     public GenericRepository<Authorization> AuthorizationRepository =>
         _authorizationRepository ??= new GenericRepository<Authorization>(_context);
 
@@ -35,6 +37,8 @@ public sealed class UnitOfWork : IDisposable
         _productRepository ??= new GenericRepository<Product>(_context);
 
     public GenericRepository<Price> PriceRepository => _priceRepository ??= new GenericRepository<Price>(_context);
+
+    public GenericRepository<Order> OrderRepository => _orderRepository ??= new GenericRepository<Order>(_context);
 
     public void Dispose()
     {

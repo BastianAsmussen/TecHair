@@ -19,7 +19,6 @@
         <router-link to="/Appointments" class="grid-item">
           <h2>Appointments</h2>
         </router-link>
-
       </div>
   </div>
 

@@ -1,21 +1,53 @@
 <script>
+import FetchProduct from '@/components/FetchProductComponent.vue';
 
+export default {
+    name: 'SalesView',
+    components: {
+        FetchProduct
+    },
+    data() {
+        return {
+            latestPrice: (priceHistory) => {
+                return priceHistory.reduce((latest, time) => {
+                    return latest.time > time.time ? latest : time;
+                }).value;
+            },
+            products: [],
+            selectedProducts: [],
+        }
+    },
+    computed: {
+        totalPrice() {
+            return this.selectedProducts.reduce((total, product) => {
+                return total + this.latestPrice(product.priceHistory);
+            }, 50);
+        }
+    },
+    methods: {
+        handleProductsFetched(products) {
+            this.products = products;
+        },
+        addProductToSales(product) {
+            this.selectedProducts.push(product);
+        }
+    },
+}
 </script>
 
 <template>
     <div class="page">
         <div class="products">
             <h1 class="page-title">Products</h1>
+            <button @click="$router.push('/')">Home</button>
             <div class="grid-container">
-                <div class="grid-item">1</div>
-                <div class="grid-item">2</div>
-                <div class="grid-item">3</div>
-                <div class="grid-item">4</div>
-                <div class="grid-item">5</div>
-                <div class="grid-item">6</div>
-                <div class="grid-item">7</div>
-                <div class="grid-item">8</div>
-                <div class="grid-item">9</div>
+                <FetchProduct @products-fetched="handleProductsFetched" />
+                <div class="grid-item" v-for="product in products" :key="product.id" @click="addProductToSales(product)">
+                    <img :src="product.image" alt="product image" width="50" height="50">
+                    <p>{{ product.name }}</p>
+                    <p>{{ latestPrice(product.priceHistory) }}</p>
+                    <p>{{ product.description }}</p>
+                </div>
             </div>
         </div>
 
@@ -23,26 +55,26 @@
             <h1 class="page-title">Sales</h1>
             <div class="sales-products">
                 <div class="sales-grid-container">
-                    <div class="sales-grid-item">1</div>
-                    <div class="sales-grid-item">2</div>
+                    <div class="sales-grid-item" v-for="product in selectedProducts" :key="product.id">
+                        <p>{{ product.name }}</p>
+                        <p>Price: {{ latestPrice(product.priceHistory) }}</p>
+                    </div>
                 </div>
             </div>
 
             <div class="sales-info">
                 <div class="sales-prize">
-                    <p>prize : </p>
-                    <p> moms :</p>
+                    <p>Price: {{ totalPrice }}kr</p>
+                    <p>Moms:  </p>
                 </div>
-                    <button class="confirm-btn">
-                        <p>confirm order</p>
-                    </button>
+                <button class="confirm-btn">
+                    <p>confirm order</p>
+                </button>
             </div>
         </div>
-
     </div>
-
-
 </template>
+
 
 
 <style scoped>
@@ -73,6 +105,9 @@
     height: 15vh;
     border-radius: 10px;
 }
+.grid-item:hover {
+    background: #F8F9FA;
+}
 .page-title {
     text-align: center;
     margin-top: 20px;
@@ -96,6 +131,9 @@
     display: grid;
     gap: 10px;
     padding: 10px;
+    overflow: auto;
+    max-height: 600px;
+
 
 }
 .sales-grid-item {
@@ -105,6 +143,8 @@
     height: 5vh;
     margin: 10px;
     border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
 }
 
 .sales-info{

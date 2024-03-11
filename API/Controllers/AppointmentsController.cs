@@ -20,7 +20,7 @@ public class AppointmentsController : ControllerBase
 
         try
         {
-            var appointments = await _unitOfWork.AppointmentRepository.Get();
+            var appointments = await _unitOfWork.AppointmentRepository.Get(includeProperties: "Barber,Customer");
 
             return Ok(appointments);
         }

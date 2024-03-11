@@ -128,7 +128,6 @@ public class ProductsController : ControllerBase
 
             // If the stock is less than 0, return a bad request.
             if (product.Stock < 0) return BadRequest("Invalid stock!");
-
             // If all prices sum to less than 0, return a bad request.
             if (product.PriceHistory.Sum(p => p.Value) < 0)
                 return BadRequest("Invalid price!");

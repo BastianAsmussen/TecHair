@@ -26,7 +26,8 @@ export default {
     },
     methods: {
         handleProductsFetched(products) {
-            this.products = products;
+            // Filter products to include only those with stock greater than 0
+            this.products = products.filter(product => product.stock > 0);
         },
         addProductToSales(product) {
             this.selectedProducts.push(product);
@@ -42,11 +43,13 @@ export default {
             <button @click="$router.push('/')">Home</button>
             <div class="grid-container">
                 <FetchProduct @products-fetched="handleProductsFetched" />
-                <div class="grid-item" v-for="product in products" :key="product.id" @click="addProductToSales(product)">
-                    <img :src="product.image" alt="product image" width="50" height="50">
-                    <p>{{ product.name }}</p>
-                    <p>{{ latestPrice(product.priceHistory) }}</p>
-                    <p>{{ product.description }}</p>
+                <div class="grid-item" v-for="product in products" :key="product.id"  @click="addProductToSales(product)">
+                    <div v-if="product.stock > 0">
+                        <img :src="product.image" alt="product image" width="50" height="50">
+                        <p>{{ product.name }}</p>
+                        <p>{{ latestPrice(product.priceHistory) }}</p>
+                        <p>{{ product.description }}</p>
+                    </div>
                 </div>
             </div>
         </div>

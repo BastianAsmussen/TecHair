@@ -7,7 +7,7 @@ import StorageView from "@/views/StorageView.vue";
 
 const routes = [
     {
-        path: '/',
+        path: '/login',
         name: 'Login',
         component: LoginView
     },

@@ -41,6 +41,18 @@ public class AppointmentsController : ControllerBase
 
         try
         {
+            // Make sure the employee exists.
+            var barber = await _unitOfWork.EmployeeRepository.GetById(appointment.Barber.EmployeeId);
+            if (barber == null) return BadRequest("Barber not found!");
+
+            appointment.Barber = barber;
+
+            // Make sure the customer exists.
+            var customer = await _unitOfWork.UserRepository.GetById(appointment.Customer.UserId);
+            if (customer == null) return BadRequest("Customer not found!");
+
+            appointment.Customer = customer;
+
             _unitOfWork.AppointmentRepository.Insert(appointment);
             await _unitOfWork.Save();
 
@@ -89,6 +101,18 @@ public class AppointmentsController : ControllerBase
 
         try
         {
+            // Make sure the employee exists.
+            var barber = await _unitOfWork.EmployeeRepository.GetById(appointment.Barber.EmployeeId);
+            if (barber == null) return BadRequest("Barber not found!");
+
+            appointment.Barber = barber;
+
+            // Make sure the customer exists.
+            var customer = await _unitOfWork.UserRepository.GetById(appointment.Customer.UserId);
+            if (customer == null) return BadRequest("Customer not found!");
+
+            appointment.Customer = customer;
+
             _unitOfWork.AppointmentRepository.Update(appointment);
             await _unitOfWork.Save();
 
